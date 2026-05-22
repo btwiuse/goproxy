@@ -72,6 +72,21 @@ func main() {
 			r.Out.RequestURI = "" // http.Client rejects requests with RequestURI set
 		},
 		Transport: newFollowTransport(),
+		ModifyResponse: func(r *http.Response) error {
+			// Strip CORS headers from upstream response to avoid
+			// duplicates — the cors middleware below sets its own.
+			for _, h := range []string{
+				"Access-Control-Allow-Origin",
+				"Access-Control-Allow-Methods",
+				"Access-Control-Allow-Headers",
+				"Access-Control-Expose-Headers",
+				"Access-Control-Max-Age",
+				"Access-Control-Allow-Credentials",
+			} {
+				r.Header.Del(h)
+			}
+			return nil
+		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Printf("ERROR: %v", err)
 			http.Error(w, err.Error(), http.StatusBadGateway)
